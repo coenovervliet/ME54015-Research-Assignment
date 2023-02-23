@@ -1013,14 +1013,14 @@ plt.savefig('Average duration of installation per assembly.pdf', bbox_inches= 't
 
 #%% Plot average total cost installation per MW
 
-average_cost_per_MW_calm_weather = results_calm_weather.COST_TOT/30
-average_cost_per_MW_WR = mean_total_cost_WR/30
-average_cost_per_MW_weather_1 = mean_total_cost_1/30
-average_cost_per_MW_weather_12 = mean_total_cost_12/30
-average_cost_per_MW_weather_24 = mean_total_cost_24/30
-average_cost_per_MW_weather_48 = mean_total_cost_48/30
-average_cost_per_MW_weather_72 = mean_total_cost_72/30
-average_cost_per_MW_weather_96 = mean_total_cost_96/30
+average_cost_per_MW_calm_weather = results_calm_weather.COST_TOT/300
+average_cost_per_MW_WR = mean_total_cost_WR/300
+average_cost_per_MW_weather_1 = mean_total_cost_1/300
+average_cost_per_MW_weather_12 = mean_total_cost_12/300
+average_cost_per_MW_weather_24 = mean_total_cost_24/300
+average_cost_per_MW_weather_48 = mean_total_cost_48/300
+average_cost_per_MW_weather_72 = mean_total_cost_72/300
+average_cost_per_MW_weather_96 = mean_total_cost_96/300
 
 plt.figure(figsize=(12,10))
 plt.scatter(options, average_cost_per_MW_WR, label='Perfect forecast', color='black', s=100)
