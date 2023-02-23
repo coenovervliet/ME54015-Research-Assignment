@@ -76,8 +76,8 @@ def ANN_data_preparation(years, Train_years, Val_years, Test_years, input_datapo
     # Add weather data of each year to correct array                                        
     for year in years:
         df1 = pd.read_table("E:/OneDrive/Documenten/TUDelft/Master Jaar 2/ME54015 Research Assignment/Assignment Hugo Boer/Site15Wave/Wave/"+str(year)+".txt") 
-        df1['mean_period'] = 1/df1.peak_fr
-        df1 = df1[['datetime','s_wht','wind_speed','mean_period']]
+        df1['peak_period'] = 1/df1.peak_fr
+        df1 = df1[['datetime','s_wht','wind_speed','peak_period']]
         
         startdate = str(year)+'-05-01 00:00:00'
         ts = pd.to_datetime(startdate)

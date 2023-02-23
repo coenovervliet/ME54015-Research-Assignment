@@ -2,7 +2,7 @@
 """
 Created on Mon Feb  6 14:14:21 2023
 
-@author: coeno
+@author: Coen Overvliet
 """
 
 from ANN_Forecasting_Model import predict_weather_ANN
@@ -18,12 +18,12 @@ Val_years = [2007]
 Test_years = [2008,2009,2010]
 
 input_datapoints = 8
-prediction_horizon = 1
+prediction_horizon = 96
 datapoints_predicted = 1
 
 epochs = 50
-nodes_per_layer = 64     #Or LSTM per layer. Number of layers needs to be adjusted manually
-batch_size = 64
+nodes_per_layer = 132   #Or LSTM per layer. Number of layers needs to be adjusted manually
+batch_size = 32
 learning_rate = 0.001
 
 method = 1              #Select model method (1: ANN - 2: LSTM)

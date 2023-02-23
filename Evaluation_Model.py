@@ -2,7 +2,7 @@
 """
 Created on Wed Dec  1 15:15:30 2021
 
-@author: Hugo Boer (modified and extended by Coen Overvliet)
+@author: Coen Overvliet (adaptation of weather restricted model by Hugo Boer)
 """
 import pandas as pd  
 import math
@@ -12,7 +12,7 @@ import numpy as np
 from ANN_Forecasting_Model import predict_weather_ANN
 from LSTM_Forecasting_Model import predict_weather_LSTM
 import matplotlib.pyplot as plt
-from RMSE_Function import Determine_RMSE
+from Error_Functions import Determine_RMSE, Count_error_direction
 
 # %% Initialize
 
@@ -40,15 +40,16 @@ Test_years = [2008,2009,2010]
 
 input_datapoints = 2
 prediction_horizon = 1
-datapoints_predicted = 1
+datapoints_predicted = 3
 
-epochs = 50
-nodes_per_layer = 32        #Or LSTM per layer. Number of layers needs to be adjusted manually
-batch_size = 64
-learning_rate = 0.001
+epochs = 25
+nodes_per_layer = 132       #Or LSTM per layer. Number of layers needs to be adjusted manually
+batch_size = 32
+learning_rate = 0.0001
 
 method = 1                  #Select model method (1: ANN - 2: LSTM)
 configuration = 2           #Select input/output configuration (1: 1 model with 3 inputs and 3 outputs - 2: 3 models with 1 input and 1 output)
+save_results = True         #Write results to excel file
 
 # Predict weather using selected method and configuration
 
@@ -56,7 +57,6 @@ if method == 1:
     predict_weather_ANN(configuration, years, Train_years, Val_years, Test_years, input_datapoints, prediction_horizon, datapoints_predicted, epochs, nodes_per_layer, batch_size, learning_rate)
 if method == 2:    
     predict_weather_LSTM(configuration, years, Train_years, Val_years, Test_years, input_datapoints, prediction_horizon, datapoints_predicted, epochs, nodes_per_layer, batch_size, learning_rate)
-
 # Predicted weather data is written to file as part of the predict_weather functions (location: \Wave)
 
 # Create dataframes for results
@@ -73,6 +73,7 @@ WAIT_WTB = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4'
 COST_WTB = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 T_TOT = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 COST_TOT = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
+PEN_COST = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 
 Waitingtransfdn = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 Waitingjackfdn = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
@@ -107,16 +108,16 @@ Wind_speed_metrics_FP = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3
 Wind_speed_metrics_TN = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 Wind_speed_metrics_FN = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 
-Mean_period_metrics_TP = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
-Mean_period_metrics_FP = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
-Mean_period_metrics_TN = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
-Mean_period_metrics_FN = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
+peak_period_metrics_TP = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
+peak_period_metrics_FP = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
+peak_period_metrics_TN = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
+peak_period_metrics_FN = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=test_years_indices)
 
 mean_overall_metrics = pd.DataFrame(columns =['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8', 'Option 9'], index=['TP', 'FP', 'TN', 'FN'])
 
 forecasting_period = prediction_horizon+datapoints_predicted-1
 forecasting_periods_s_wht = s_wht_Alpha_Factors.iloc[0, 1:]
-forecasting_period_wind_speed = wind_speed_Alpha_Factors.iloc[0, 1:]
+forecasting_periods_wind_speed = wind_speed_Alpha_Factors.iloc[0, 1:]
 
 # Select applicable alpha factors from alpha factor table
 i = 0
@@ -126,7 +127,7 @@ while forecasting_period > forecasting_periods_s_wht.iloc[i]:
 s_wht_alpha_factors = s_wht_Alpha_Factors.iloc[1:, i+1]
 
 i = 0
-while forecasting_period > forecasting_period_wind_speed.iloc[i]:
+while forecasting_period > forecasting_periods_wind_speed.iloc[i]:
     i+=1
     
 wind_speed_alpha_factors = wind_speed_Alpha_Factors.iloc[1:3, i+1]
@@ -200,41 +201,40 @@ for option in range (1,10):
         HS_TRANS_FDN = Data_Limits.iloc[2+VT_FDN,1]               #Significant wave height limit transportation Foundation Vessel 
         HS_POS_FDN = Data_Limits.iloc[2+VT_FDN,2]                 #Significant wave height limit positioning Foundation Vessel 
         HS_MONO =Data_Limits.iloc[2+VT_FDN,3]                     #Significant wave height limit monopile installation  
-        TP_MONO =Data_Limits.iloc[2+VT_FDN,4]                     #Mean period limit monopile installation 
+        TP_MONO =Data_Limits.iloc[2+VT_FDN,4]                     #peak period limit monopile installation 
         WS_MONO = Data_Limits.iloc[2+VT_FDN,5]                    #Wind speed limit monopile installation 
         HS_TP = Data_Limits.iloc[2+VT_FDN,6]                      #Significant wave height limit transition piece installation     
-        TP_TP =Data_Limits.iloc[2+VT_FDN,7]                       #Mean period limit transition piece installation 
+        TP_TP =Data_Limits.iloc[2+VT_FDN,7]                       #peak period limit transition piece installation 
         WS_TP =Data_Limits.iloc[2+VT_FDN,8]                       #Wind speed limit transtition piece installation 
        
         # Turbine installation
         HS_TRANS_WTB = Data_Limits.iloc[10+VT_WTB,1]              #Significant wave height limit transportation Wind turbine Vessel 
         HS_POS_WTB = Data_Limits.iloc[10+VT_WTB,2]                #Significant wave height limit positioning Wind turbine Vessel 
         HS_TOW = Data_Limits.iloc[10+VT_WTB,3]                    #Significant wave height limit tower installation 
-        TP_TOW = Data_Limits.iloc[10+VT_WTB,4]                    #Mean period limit tower installation 
+        TP_TOW = Data_Limits.iloc[10+VT_WTB,4]                    #peak period limit tower installation 
         WS_TOW = Data_Limits.iloc[10+VT_WTB,5]                    #Wind speed limit tower 
         HS_NAC = Data_Limits.iloc[10+VT_WTB,6]                    #Significant wave height limit nacelle installation 
-        TP_NAC = Data_Limits.iloc[10+VT_WTB,7]                    #Mean period limit nacelle installation 
+        TP_NAC = Data_Limits.iloc[10+VT_WTB,7]                    #peak period limit nacelle installation 
         WS_NAC = Data_Limits.iloc[10+VT_WTB,8]                    #Wind speed limit nacelle installation 
         HS_BLADE = Data_Limits.iloc[10+VT_WTB,9]                  #Significant wave height limit blade installation 
-        TP_BLADE = Data_Limits.iloc[10+VT_WTB,10]                 #Mean period limit blade installation 
+        TP_BLADE = Data_Limits.iloc[10+VT_WTB,10]                 #peak period limit blade installation 
         WS_BLADE = Data_Limits.iloc[10+VT_WTB,11]                 #Wind speed limit blade installation 
         HS_JACK = 1                                               #Significant wave height limit jacking       
  
         #--------- Penalties ---------
-        FP_PEN = 20                                               #Penalty for False Positive predictions (possible damages)
+        FP_PEN = 2                                                #Penalty for False Positive predictions (possible damages)
         
         #%% Weather Data input 
         startdate = str(year)+'-05-01 00:00:00'                   #Starting on the first day of summer on the selected year
         ts = pd.to_datetime(startdate)                            #Creates a timestamp for the start of the year      
         start = (ts.dayofyear-1)*24+ts.hour+prediction_horizon    #Gives us the hour of the year, including the prediction horizon 
         
-        df2 = pd.read_table("E:/OneDrive/Documenten/TUDelft/Master Jaar 2/ME54015 Research Assignment/Assignment Hugo Boer/Site15Wave/Wave/"+str(year)+".txt") 
-        df2['mean_period'] = 1/df2.peak_fr                        #Take inverse of peak frequency for mean period
-        df2 = df2[['datetime','s_wht','wind_speed','mean_period']]
+        df2 = pd.read_table("Wave/"+str(year)+".txt") 
+        df2['peak_period'] = 1/df2.peak_fr                        #Take inverse of peak frequency for peak period
+        df2 = df2[['datetime','s_wht','wind_speed','peak_period']]
         
-        df1 = pd.read_table("E:/OneDrive/Documenten/TUDelft/Master Jaar 2/ME54015 Research Assignment/Assignment Hugo Boer/Site15Wave/Wave/"+str(year)+"pred.txt") 
-        
-        #df1 = df2.copy()        
+        df1 = pd.read_table("Wave/"+str(year)+"pred.txt")    
+        #df1 = df2.copy()                                         #uncomment for perfect forecast, comment previous line      
         
         #%% Starting parameter set up
         
@@ -250,10 +250,12 @@ for option in range (1,10):
         FDN_Installed = 0 
         FDN_Onboard = 0
         
+        check_duration = 0                                        #Used to check if foundation and turbine installation duration does not exceed the end of the year
+        
         overall_metrics = np.zeros(4, dtype=int)
         s_wht_metrics = np.zeros(4, dtype=int)
         wind_speed_metrics = np.zeros(4, dtype=int)
-        mean_period_metrics = np.zeros(4, dtype=int)
+        peak_period_metrics = np.zeros(4, dtype=int)
         
         #%% Operation steps installing foundations without supply barges 
         
@@ -288,7 +290,7 @@ for option in range (1,10):
                         
                 weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                     DUR_TRANS_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_FDN, 
-                    wind_speed_limit=None, mean_period_limit=None)                      #Find suitable weather window for travelling to site
+                    wind_speed_limit=None, peak_period_limit=None)                      #Find suitable weather window for travelling to site
                 
                 waiting = waiting + weather_check_results[1]                            #Add time waiting on weather to total time waiting
                 TOTAL_TIME_FDN = weather_check_results[0]                               #Updated total time installing foundations
@@ -297,7 +299,7 @@ for option in range (1,10):
                 overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                 s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                 wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                 #print(overall_metrics)
        
                 #print("total time after transit",TOTAL_TIME_FDN)                
@@ -312,7 +314,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_POS_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_POS_FDN, 
-                        wind_speed_limit=None, mean_period_limit=None)                  #Find suitable weather window for positioning of the vessel for installation of foundation
+                        wind_speed_limit=None, peak_period_limit=None)                  #Find suitable weather window for positioning of the vessel for installation of foundation
                     
                     waiting = waiting + weather_check_results[1]                        #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                           #Updated total time installing foundations
@@ -321,7 +323,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after positioning', TOTAL_TIME_FDN)
@@ -336,7 +338,7 @@ for option in range (1,10):
                         
                         weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                             DUR_JACK_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_JACK, 
-                            wind_speed_limit=None, mean_period_limit=None)                     #Find suitable weather window for jack-up of the vessel for installation of foundation
+                            wind_speed_limit=None, peak_period_limit=None)                     #Find suitable weather window for jack-up of the vessel for installation of foundation
                         
                         waiting = waiting + weather_check_results[1]                            #Add time waiting on weather to total time waiting
                         TOTAL_TIME_FDN = weather_check_results[0]                               #Updated total time installing foundations
@@ -345,7 +347,7 @@ for option in range (1,10):
                         overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                         s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                         wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                        mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                        peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                         #print(overall_metrics)
                         
                         #print("Time after jacking-up vessel:",TOTAL_TIME_FDN)
@@ -364,7 +366,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_MONO, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_MONO, 
-                        wind_speed_limit=WS_MONO, mean_period_limit=TP_MONO)                    #Find suitable weather window for lifting, positioning and hammering of foundation
+                        wind_speed_limit=WS_MONO, peak_period_limit=TP_MONO)                    #Find suitable weather window for lifting, positioning and hammering of foundation
                     
                     waiting = waiting + weather_check_results[1]                                #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                                   #Updated total time installing foundations
@@ -373,7 +375,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after positioning and hammering foundation:', TOTAL_TIME_FDN)
@@ -389,7 +391,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_TP, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TP, 
-                        wind_speed_limit=WS_TP, mean_period_limit=TP_TP)                    #Find suitable weather window for lifting and grouting of transition piece
+                        wind_speed_limit=WS_TP, peak_period_limit=TP_TP)                    #Find suitable weather window for lifting and grouting of transition piece
                     
                     waiting = waiting + weather_check_results[1]                            #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                               #Updated total time installing foundations
@@ -398,7 +400,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model 
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after lifting and grouting transition piece:', TOTAL_TIME_FDN)
@@ -413,7 +415,7 @@ for option in range (1,10):
                         
                         weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                             DUR_JACK_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_JACK, 
-                            wind_speed_limit=None, mean_period_limit=None)                     #Find suitable weather window for jack-down of the vessel after installation of foundation
+                            wind_speed_limit=None, peak_period_limit=None)                     #Find suitable weather window for jack-down of the vessel after installation of foundation
                     
                         waiting = waiting + weather_check_results[1]                            #Add time waiting on weather to total time waiting
                         TOTAL_TIME_FDN = weather_check_results[0]                               #Updated total time installing foundations
@@ -422,7 +424,7 @@ for option in range (1,10):
                         overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model 
                         s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                         wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                        mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                        peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                         #print(overall_metrics)
                         
                         #print('time after jacking-down vessel:', TOTAL_TIME_FDN) 
@@ -452,7 +454,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_TRANS_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_FDN, 
-                        wind_speed_limit=None, mean_period_limit=None)                 #Find suitable weather window to travel back to port
+                        wind_speed_limit=None, peak_period_limit=None)                 #Find suitable weather window to travel back to port
                     
                     waiting = waiting + weather_check_results[1]                        #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                           #Updated total time installing foundations
@@ -461,24 +463,13 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model 
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('return to port')
                     
             #print('TOTAL time installation foundations', math.ceil(TOTAL_TIME_FDN), 'hours')   
-
-            #-------- Step 12 --------
-            #Save all evaluation metrics to dataframes
-            
-            T_FDN.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME_FDN)              #Save total time installing foundations
-            WAIT_FDN.loc[str(year),'Option '+str(option)] = math.ceil(waiting)                  #Save total time waiting during installation of foundations
-            Waitingtransfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingtransfdn)   #Save time waiting to travel to/from the site during installation of foundations
-            Waitingposfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingposfdn)       #Save time waiting to position vessel during installion of foundations
-            Waitingjackfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingjackfdn)     #Save time waiting to jack-up/down vessel during installion of foundations
-            Waitingmono.loc[str(year),'Option '+str(option)] = math.ceil(waitingmono)           #Save time waiting to lift and hammer monopile foundations during installation of foundations
-            Waitingtp.loc[str(year),'Option '+str(option)] = math.ceil(waitingtp)               #Sace time waiting to lift and grout transition pieces during installation of foundations
-            
+     
         #%% Operation steps installing foundations with supply barges 
             
         elif SUPPLY_FDN == 1:
@@ -499,7 +490,7 @@ for option in range (1,10):
             overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model 
             s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
             wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-            mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+            peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
             #print(overall_metrics)
             
             #print("total time after transit",TOTAL_TIME_FDN)            
@@ -525,7 +516,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_POS, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_POS_FDN, 
-                        wind_speed_limit=None, mean_period_limit=None)                 #Find suitable weather window to position and jack-up the vessel
+                        wind_speed_limit=None, peak_period_limit=None)                 #Find suitable weather window to position and jack-up the vessel
                     
                     waiting = waiting + weather_check_results[1]                        #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                           #Updated total time installing foundations
@@ -534,7 +525,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model 
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after positioning and jacking-up:', TOTAL_TIME_FDN)
@@ -550,7 +541,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_MONO, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_MONO, 
-                        wind_speed_limit=WS_MONO, mean_period_limit=TP_MONO)                    #Find suitable weather window for lifting, positioning and hammering of foundation
+                        wind_speed_limit=WS_MONO, peak_period_limit=TP_MONO)                    #Find suitable weather window for lifting, positioning and hammering of foundation
                     
                     waiting = waiting + weather_check_results[1]                                #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                                   #Updated total time installing foundations
@@ -559,7 +550,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model 
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after lifting and hammering monopile:', TOTAL_TIME_FDN)
@@ -575,7 +566,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                         DUR_TP, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TP, 
-                        wind_speed_limit=WS_TP, mean_period_limit=TP_TP)                    #Find suitable weather window for lifting and grouting of transition piece
+                        wind_speed_limit=WS_TP, peak_period_limit=TP_TP)                    #Find suitable weather window for lifting and grouting of transition piece
                     
                     waiting = waiting + weather_check_results[1]                            #Add time waiting on weather to total time waiting
                     TOTAL_TIME_FDN = weather_check_results[0]                               #Updated total time installing foundations
@@ -584,7 +575,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model 
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after lifting and grouting transition piece:', TOTAL_TIME_FDN)
@@ -598,7 +589,7 @@ for option in range (1,10):
                         
                         weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                             DUR_JACK_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_JACK, 
-                            wind_speed_limit=None, mean_period_limit=None)                     #Find suitable weather window for jack-down of the vessel after installation of foundation
+                            wind_speed_limit=None, peak_period_limit=None)                     #Find suitable weather window for jack-down of the vessel after installation of foundation
                     
                         waiting = waiting + weather_check_results[1]                            #Add time waiting on weather to total time waiting
                         TOTAL_TIME_FDN = weather_check_results[0]                               #Updated total time installing foundations
@@ -607,7 +598,7 @@ for option in range (1,10):
                         overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model 
                         s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                         wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                        mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                        peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                         #print(overall_metrics)
                         	
                     else:
@@ -653,7 +644,7 @@ for option in range (1,10):
             
             weather_check_results = weather_check(TOTAL_TIME_FDN, start, 
                 DUR_TRANS_FDN, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_FDN, 
-                wind_speed_limit=None, mean_period_limit=None)                         #Find suitable weather window to travel back to port
+                wind_speed_limit=None, peak_period_limit=None)                         #Find suitable weather window to travel back to port
                     
             waiting = waiting + weather_check_results[1]                                #Add overall metrics of forecasting model 
             TOTAL_TIME_FDN = weather_check_results[0]                                   #Updated total time installing foundations
@@ -662,7 +653,7 @@ for option in range (1,10):
             overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model
             s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
             wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-            mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+            peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
             #print(overall_metrics)
             
         #print('return to port')          
@@ -671,15 +662,19 @@ for option in range (1,10):
         
         #-------- Step 13 --------
         #Save all evaluation metrics to dataframes
-     
-        T_FDN.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME_FDN)              #Save total time installing foundations
-        WAIT_FDN.loc[str(year),'Option '+str(option)] = math.ceil(waiting)                  #Save total time waiting during installation of foundations
-        Waitingtransfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingtransfdn)   #Save time waiting to travel to/from the site during installation of foundations
-        Waitingposfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingposfdn)       #Save time waiting to position vessel during installion of foundations
-        Waitingjackfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingjackfdn)     #Save time waiting to jack-up/down vessel during installion of foundations
-        Waitingmono.loc[str(year),'Option '+str(option)] = math.ceil(waitingmono)           #Save time waiting to lift and hammer monopile foundations during installation of foundations
-        Waitingtp.loc[str(year),'Option '+str(option)] = math.ceil(waitingtp)               #Sace time waiting to lift and grout transition pieces during installation of foundations      
+        if TOTAL_TIME_FDN < len(df1)-start:
+            check_duration+=1
+            
+            T_FDN.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME_FDN)              #Save total time installing foundations
+            WAIT_FDN.loc[str(year),'Option '+str(option)] = math.ceil(waiting)                  #Save total time waiting during installation of foundations
+            Waitingtransfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingtransfdn)   #Save time waiting to travel to/from the site during installation of foundations
+            Waitingposfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingposfdn)       #Save time waiting to position vessel during installion of foundations
+            Waitingjackfdn.loc[str(year),'Option '+str(option)] = math.ceil(waitingjackfdn)     #Save time waiting to jack-up/down vessel during installion of foundations
+            Waitingmono.loc[str(year),'Option '+str(option)] = math.ceil(waitingmono)           #Save time waiting to lift and hammer monopile foundations during installation of foundations
+            Waitingtp.loc[str(year),'Option '+str(option)] = math.ceil(waitingtp)               #Sace time waiting to lift and grout transition pieces during installation of foundations      
 
+            TOTAL_COST_FDN = (TOTAL_TIME_FDN) *(CHT_C_FDN/24)    #Cost of installation of Foundations. Rental cost/hour 
+            COST_FDN.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_COST_FDN)
                       
         #%% Additional parameter setup
 
@@ -726,7 +721,7 @@ for option in range (1,10):
                 
                 weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                     DUR_TRANS_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_WTB, 
-                    wind_speed_limit=None, mean_period_limit=None)                      #Find suitable weather window for travelling to site
+                    wind_speed_limit=None, peak_period_limit=None)                      #Find suitable weather window for travelling to site
                     
                 waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                 TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -735,7 +730,7 @@ for option in range (1,10):
                 overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                 s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                 wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                 #print(overall_metrics)
                 
             
@@ -749,7 +744,7 @@ for option in range (1,10):
                 
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_POS_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_POS_WTB, 
-                        wind_speed_limit=None, mean_period_limit=None)                  #Find suitable weather window for positioning of the vessel for installation of turbine
+                        wind_speed_limit=None, peak_period_limit=None)                  #Find suitable weather window for positioning of the vessel for installation of turbine
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                  #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                           #Updated total time installing turbines
@@ -758,7 +753,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
 
                     #print('time after positioning', TOTAL_TIME_WTB)
@@ -773,7 +768,7 @@ for option in range (1,10):
                         
                         weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                             DUR_JACK_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_JACK, 
-                            wind_speed_limit=None, mean_period_limit=None)                      #Find suitable weather window for jack-up of the vessel for installation of turbine
+                            wind_speed_limit=None, peak_period_limit=None)                      #Find suitable weather window for jack-up of the vessel for installation of turbine
                     
                         waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                         TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -782,7 +777,7 @@ for option in range (1,10):
                         overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                         s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                         wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                        mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                        peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                         #print(overall_metrics)
                          		
                     else:
@@ -796,7 +791,7 @@ for option in range (1,10):
                 
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_HOIST_TOW, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TOW, 
-                        wind_speed_limit=WS_TOW, mean_period_limit=TP_TOW)                 #Find suitable weather window for lifting and positioning of towerpieces
+                        wind_speed_limit=WS_TOW, peak_period_limit=TP_TOW)                 #Find suitable weather window for lifting and positioning of towerpieces
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -805,7 +800,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after lift tower piece',WTB_Installed+1,':',TOTAL_TIME_WTB)
@@ -818,7 +813,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_HOIST_NAC, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_NAC, 
-                        wind_speed_limit=WS_NAC, mean_period_limit=TP_NAC)                 #Find suitable weather window for lifting and installing of nacelle
+                        wind_speed_limit=WS_NAC, peak_period_limit=TP_NAC)                 #Find suitable weather window for lifting and installing of nacelle
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -827,7 +822,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                     
                     #print('time after lift nacelle',WTB_Installed+1,':',TOTAL_TIME_WTB)
@@ -841,7 +836,7 @@ for option in range (1,10):
                             
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                                 DUR_INST_BLADE, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_BLADE, 
-                                wind_speed_limit=WS_BLADE, mean_period_limit=TP_BLADE)                 #Find suitable weather window for lifting and installing blades
+                                wind_speed_limit=WS_BLADE, peak_period_limit=TP_BLADE)                 #Find suitable weather window for lifting and installing blades
                         
                         #print('TOTAL_TIME_WTB before:'+str(TOTAL_TIME_WTB))
                         #print('waiting blade before:'+str(waitingblade))
@@ -859,7 +854,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
                         #print(overall_metrics)
                         
                     #print('time after installing blades',WTB_Installed+1, ':', TOTAL_TIME_WTB)
@@ -874,7 +869,7 @@ for option in range (1,10):
                 
                         weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                             DUR_JACK_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_JACK, 
-                            wind_speed_limit=None, mean_period_limit=None)                     #Find suitable weather window for jack-down of vessel
+                            wind_speed_limit=None, peak_period_limit=None)                     #Find suitable weather window for jack-down of vessel
                     
                         waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                         TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -883,7 +878,7 @@ for option in range (1,10):
                         overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                         s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                         wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                        mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                        peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                         #print(overall_metrics)
                                 
                     WTB_Installed = WTB_Installed+1                                     #Update number of turbines installed
@@ -908,7 +903,7 @@ for option in range (1,10):
 
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_TRANS_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_WTB, 
-                        wind_speed_limit=None, mean_period_limit=None)                     #Find suitable weather window for travelling back to port
+                        wind_speed_limit=None, peak_period_limit=None)                     #Find suitable weather window for travelling back to port
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -917,7 +912,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics)
                             
                     #print('return to port')
@@ -937,7 +932,7 @@ for option in range (1,10):
 
             weather_check_results = weather_check(TOTAL_TIME_WTB, start,
                 DUR_TRANS_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_WTB, 
-                wind_speed_limit=None, mean_period_limit=None)                         #Find suitable weather window for travelling to site
+                wind_speed_limit=None, peak_period_limit=None)                         #Find suitable weather window for travelling to site
                     
             waitingwtb = waitingwtb + weather_check_results[1]                          #Add time waiting on weather to total time waiting during turbine installation
             TOTAL_TIME_WTB = weather_check_results[0]                                   #Updated total time installing turbines
@@ -946,7 +941,7 @@ for option in range (1,10):
             overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model
             s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
             wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-            mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+            peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
             #print(overall_metrics)                         
           
             #print("total time after transit",TOTAL_TIME_WTB)
@@ -973,7 +968,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_POS_JACK, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_POS_WTB, 
-                        wind_speed_limit=None, mean_period_limit=None)                 #Find suitable weather window for jack-up of the vessel for installation of turbines
+                        wind_speed_limit=None, peak_period_limit=None)                 #Find suitable weather window for jack-up of the vessel for installation of turbines
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                  #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                           #Updated total time installing turbines
@@ -982,7 +977,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics) 
                     
                     #print('time after positioning and jacking-up:', TOTAL_TIME_WTB)
@@ -995,7 +990,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_HOIST_TOW, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TOW, 
-                        wind_speed_limit=WS_TOW, mean_period_limit=TP_TOW)                 #Find suitable weather window for lifting and positioning of towerpieces
+                        wind_speed_limit=WS_TOW, peak_period_limit=TP_TOW)                 #Find suitable weather window for lifting and positioning of towerpieces
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -1004,7 +999,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics) 
                     
                     #print('time after lift tower piece',WTB_Installed+1,':',TOTAL_TIME_WTB)
@@ -1017,7 +1012,7 @@ for option in range (1,10):
                     
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                         DUR_HOIST_NAC, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_NAC, 
-                        wind_speed_limit=WS_NAC, mean_period_limit=TP_NAC)                 #Find suitable weather window for lifting and installing of nacelle
+                        wind_speed_limit=WS_NAC, peak_period_limit=TP_NAC)                 #Find suitable weather window for lifting and installing of nacelle
                     
                     waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                     TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -1026,7 +1021,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                     #print(overall_metrics) 
                     
                     #print('time after lift nacelle',WTB_Installed+1,':',TOTAL_TIME_WTB)
@@ -1040,7 +1035,7 @@ for option in range (1,10):
                             
                     weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                                 DUR_INST_BLADE, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_BLADE, 
-                                wind_speed_limit=WS_BLADE, mean_period_limit=TP_BLADE)                  #Find suitable weather window for lifting and installing blades
+                                wind_speed_limit=WS_BLADE, peak_period_limit=TP_BLADE)                  #Find suitable weather window for lifting and installing blades
                             
                         #print('TOTAL_TIME_WTB before:'+str(TOTAL_TIME_WTB))
                         #print('waiting blade before:'+str(waitingblade))
@@ -1058,7 +1053,7 @@ for option in range (1,10):
                     overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model
                     s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
                     wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-                    mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+                    peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
                         #print(overall_metrics) 
                     
                     #print('time after installing blades',WTB_Installed+1, ':', TOTAL_TIME_WTB)
@@ -1073,7 +1068,7 @@ for option in range (1,10):
                         
                         weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                             DUR_JACK_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_POS_WTB, 
-                            wind_speed_limit=None, mean_period_limit=None)                     #Find suitable weather window for jack-down of vessel
+                            wind_speed_limit=None, peak_period_limit=None)                     #Find suitable weather window for jack-down of vessel
                     
                         waitingwtb = waitingwtb + weather_check_results[1]                      #Add time waiting on weather to total time waiting during turbine installation
                         TOTAL_TIME_WTB = weather_check_results[0]                               #Updated total time installing turbines
@@ -1082,7 +1077,7 @@ for option in range (1,10):
                         overall_metrics = overall_metrics + weather_check_results[2]            #Add overall metrics of forecasting model
                         s_wht_metrics = s_wht_metrics + weather_check_results[3]                #Add s_wht metrics of forecasting model
                         wind_speed_metrics = wind_speed_metrics + weather_check_results[4]      #Add wind_speed metrics of forecasting model
-                        mean_period_metrics = mean_period_metrics + weather_check_results[5]    #Add mean_period metrics of forecasting model
+                        peak_period_metrics = peak_period_metrics + weather_check_results[5]    #Add peak_period metrics of forecasting model
                         #print(overall_metrics) 
                     	
                     else:
@@ -1130,7 +1125,7 @@ for option in range (1,10):
 
             weather_check_results = weather_check(TOTAL_TIME_WTB, start, 
                 DUR_TRANS_WTB, df1, df2, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=HS_TRANS_WTB, 
-                wind_speed_limit=None, mean_period_limit=None)                         #Find suitable weather window to travel back to port
+                wind_speed_limit=None, peak_period_limit=None)                         #Find suitable weather window to travel back to port
                     
             waitingwtb = waitingwtb + weather_check_results[1]                          #Add time waiting on weather to total time waiting during turbine installation
             TOTAL_TIME_WTB = weather_check_results[0]                                   #Updated total time installing turbines
@@ -1139,7 +1134,7 @@ for option in range (1,10):
             overall_metrics = overall_metrics + weather_check_results[2]                #Add overall metrics of forecasting model
             s_wht_metrics = s_wht_metrics + weather_check_results[3]                    #Add s_wht metrics of forecasting model
             wind_speed_metrics = wind_speed_metrics + weather_check_results[4]          #Add wind_speed metrics of forecasting model
-            mean_period_metrics = mean_period_metrics + weather_check_results[5]        #Add mean_period metrics of forecasting model
+            peak_period_metrics = peak_period_metrics + weather_check_results[5]        #Add peak_period metrics of forecasting model
             #print(overall_metrics)                          
                   
         #print('return to port')
@@ -1147,16 +1142,24 @@ for option in range (1,10):
         
         #-------- Step 13 --------
         #Save all evaluation metrics to dataframes
-                  
-        T_WTB.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME_WTB)
-        WAIT_WTB.loc[str(year),'Option '+str(option)] = math.ceil(waitingwtb)
-        Waitingtranswtb.loc[str(year),'Option '+str(option)] = math.ceil(waitingtranswtb)
-        Waitingposwtb.loc[str(year),'Option '+str(option)] = math.ceil(waitingposwtb)
-        Waitingjackwtb.loc[str(year),'Option '+str(option)] = math.ceil(waitingjackwtb)
-        Waitingtow.loc[str(year),'Option '+str(option)] = math.ceil(waitingtow)
-        Waitingnac.loc[str(year),'Option '+str(option)] = math.ceil(waitingnac)
-        Waitingblade.loc[str(year),'Option '+str(option)] = math.ceil(waitingblade)
-        
+                 
+        if TOTAL_TIME_WTB < len(df1)-start:
+            check_duration+=1
+            
+            T_WTB.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME_WTB)
+            WAIT_WTB.loc[str(year),'Option '+str(option)] = math.ceil(waitingwtb)
+            Waitingtranswtb.loc[str(year),'Option '+str(option)] = math.ceil(waitingtranswtb)
+            Waitingposwtb.loc[str(year),'Option '+str(option)] = math.ceil(waitingposwtb)
+            Waitingjackwtb.loc[str(year),'Option '+str(option)] = math.ceil(waitingjackwtb)
+            Waitingtow.loc[str(year),'Option '+str(option)] = math.ceil(waitingtow)
+            Waitingnac.loc[str(year),'Option '+str(option)] = math.ceil(waitingnac)
+            Waitingblade.loc[str(year),'Option '+str(option)] = math.ceil(waitingblade)
+            
+            TOTAL_COST_WTB = (TOTAL_TIME_WTB) *(CHT_C_WTB/24)   #Cost of installation of Turbines, Rental cost/hour 
+            COST_WTB.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_COST_WTB)
+ 
+        #%% Results 
+        #------ results-------
         Overall_metrics_TP.loc[str(year),'Option '+str(option)] = overall_metrics[0]
         Overall_metrics_FP.loc[str(year),'Option '+str(option)] = overall_metrics[1]
         Overall_metrics_TN.loc[str(year),'Option '+str(option)] = overall_metrics[2]
@@ -1164,65 +1167,61 @@ for option in range (1,10):
         Overall_accuracy.loc[str(year),'Option '+str(option)] = (overall_metrics[0] + overall_metrics[2])/(overall_metrics.sum())
         Overall_precision.loc[str(year),'Option '+str(option)] = overall_metrics[0]/(overall_metrics[0] + overall_metrics[1])
         Overall_recall.loc[str(year),'Option '+str(option)] = overall_metrics[0]/(overall_metrics[0] + overall_metrics[3])
-        
+                
         S_wht_metrics_TP.loc[str(year),'Option '+str(option)] = s_wht_metrics[0]
-        S_wht_metrics_FP.loc[str(year),'Option '+str(option)] = s_wht_metrics[1]
         S_wht_metrics_TN.loc[str(year),'Option '+str(option)] = s_wht_metrics[2]
         S_wht_metrics_FN.loc[str(year),'Option '+str(option)] = s_wht_metrics[3]
-        
+                
         Wind_speed_metrics_TP.loc[str(year),'Option '+str(option)] = wind_speed_metrics[0]
         Wind_speed_metrics_FP.loc[str(year),'Option '+str(option)] = wind_speed_metrics[1]
         Wind_speed_metrics_TN.loc[str(year),'Option '+str(option)] = wind_speed_metrics[2]
         Wind_speed_metrics_FN.loc[str(year),'Option '+str(option)] = wind_speed_metrics[3]
+                
+        peak_period_metrics_TP.loc[str(year),'Option '+str(option)] = peak_period_metrics[0]
+        peak_period_metrics_FP.loc[str(year),'Option '+str(option)] = peak_period_metrics[1]
+        peak_period_metrics_TN.loc[str(year),'Option '+str(option)] = peak_period_metrics[2]
+        peak_period_metrics_FN.loc[str(year),'Option '+str(option)] = peak_period_metrics[3]
         
-        Mean_period_metrics_TP.loc[str(year),'Option '+str(option)] = mean_period_metrics[0]
-        Mean_period_metrics_FP.loc[str(year),'Option '+str(option)] = mean_period_metrics[1]
-        Mean_period_metrics_TN.loc[str(year),'Option '+str(option)] = mean_period_metrics[2]
-        Mean_period_metrics_FN.loc[str(year),'Option '+str(option)] = mean_period_metrics[3]
- 
-        #%% Results 
-        #------ results-------
-                                    
-        TOTAL_COST_FDN = (TOTAL_TIME_FDN) *(CHT_C_FDN/24)    #Cost of installation of Foundations. Rental cost/hour 
-        COST_FDN.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_COST_FDN)     
-        
-        TOTAL_COST_WTB = (TOTAL_TIME_WTB) *(CHT_C_WTB/24)   #Cost of installation of Turbines, Rental cost/hour 
-        COST_WTB.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_COST_WTB)
-        
-        TOTAL_TIME = TOTAL_TIME_FDN + TOTAL_TIME_WTB
-        T_TOT.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME)
-        
-        TOTAL_COST_INST = TOTAL_COST_FDN + TOTAL_COST_WTB + FP_PEN * overall_metrics[1]
-        COST_TOT.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_COST_INST)
-        
-        TOTAL_WAIT = waiting + waitingwtb 
-        WAIT_TOT.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_WAIT)
-        
-        print('   ')
-        print('Total duration of foundation installation', math.ceil(TOTAL_TIME_FDN), 'hours')  
-        print('Total waiting time during foundation installation', math.ceil(waiting), 'hours') 
-        print('Total cost of foundation installation',math.ceil(TOTAL_COST_FDN), 'kDollars')
-        
-        print('   ')
-        print('Total duration of turbine installation', math.ceil(TOTAL_TIME_WTB), 'hours')           
-        print('Total waiting time during turbine installation', math.ceil(waitingwtb), 'hours')
-        print('Total cost of turbine installation', math.ceil(TOTAL_COST_WTB), 'kDollars')
-        
-        print('   ') 
-        print('Total duration of installation farm',math.ceil(TOTAL_TIME), 'hours')    
-        print('Total cost of installation farm', math.ceil(TOTAL_COST_INST), 'kDollars') 
-        
-        print('   ') 
-        print('Completed farm installation')
-
-# Calculate and print option with shortest duration
-
-T_TOT_mean = T_TOT.mean()
-shortest_duration = T_TOT_mean.min()
-
-for option in T_TOT_mean.index:
-    if T_TOT_mean[option] == shortest_duration:
-        print("Shortest duration:", option, "-", math.ceil(shortest_duration))
+        if check_duration == 2:            
+            TOTAL_TIME = TOTAL_TIME_FDN + TOTAL_TIME_WTB
+            T_TOT.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_TIME)
+            
+            penalty_cost = FP_PEN * overall_metrics[1]
+            PEN_COST.loc[str(year),'Option '+str(option)] = penalty_cost
+            TOTAL_COST_INST = TOTAL_COST_FDN + TOTAL_COST_WTB + penalty_cost
+            COST_TOT.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_COST_INST)
+            
+            TOTAL_WAIT = waiting + waitingwtb 
+            WAIT_TOT.loc[str(year),'Option '+str(option)] = math.ceil(TOTAL_WAIT)
+            
+            print('Results option '+str(option)+', '+str(year))
+            
+            print('   ')
+            print('Total duration of foundation installation', math.ceil(TOTAL_TIME_FDN), 'hours')  
+            print('Total waiting time during foundation installation', math.ceil(waiting), 'hours') 
+            print('Total cost of foundation installation',math.ceil(TOTAL_COST_FDN), 'kDollars')
+            
+            print('   ')
+            print('Total duration of turbine installation', math.ceil(TOTAL_TIME_WTB), 'hours')           
+            print('Total waiting time during turbine installation', math.ceil(waitingwtb), 'hours')
+            print('Total cost of turbine installation', math.ceil(TOTAL_COST_WTB), 'kDollars')
+            
+            print('   ') 
+            print('Total duration of installation farm',math.ceil(TOTAL_TIME), 'hours')    
+            print('Total cost of installation farm', math.ceil(TOTAL_COST_INST), 'kDollars') 
+            
+            print('   ') 
+            print('Completed farm installation')
+            
+            print('------------------------------------------------------')
+            
+        else:
+            print('Results option '+str(option)+', '+str(year))
+            
+            print('   ')
+            print('Installation not finished before the end of the year')
+            
+            print('------------------------------------------------------')
 
 mean_overall_metrics_TP = Overall_metrics_TP.copy().mean()
 mean_overall_metrics_FP = Overall_metrics_FP.copy().mean()
@@ -1252,9 +1251,48 @@ plt.show()
 # Calculate and print RMSE values
 
 RMSE_values = Determine_RMSE(Test_years)
+error_directions = Count_error_direction(Test_years)
 
 print('   ')
 print('Forecasting model performance') 
-print("RMSE wave height:", RMSE_values[0].item())
-print("RMSE wind speed:", RMSE_values[1].item())
-print("RMSE wave period:", RMSE_values[2].item())
+print("RMSE wave height:", RMSE_values.iloc[0].item())
+print("RMSE wind speed:", RMSE_values.iloc[1].item())
+print("RMSE wave period:", RMSE_values.iloc[2].item())
+
+# Write results to excel file for further processing
+if save_results == True:
+    with pd.ExcelWriter('Results '+str(prediction_horizon)+' hours.xlsx') as writer:
+        RMSE_values.to_excel(writer, sheet_name='RMSE')
+        error_directions.to_excel(writer, sheet_name='Error directions')
+        
+        T_TOT.to_excel(writer, sheet_name='Total duration')
+        COST_TOT.to_excel(writer, sheet_name='Total cost')
+        T_FDN.to_excel(writer, sheet_name='Duration foundations')
+        T_WTB.to_excel(writer, sheet_name='Duration turbines')
+        COST_FDN.to_excel(writer, sheet_name='Cost foundations')
+        COST_WTB.to_excel(writer, sheet_name='Cost turbines')
+        PEN_COST.to_excel(writer, sheet_name='Penalty cost')
+        WAIT_TOT.to_excel(writer, sheet_name='Total waiting time')
+        
+        Waitingtransfdn.to_excel(writer, sheet_name='Waiting transit FDN')
+        Waitingposfdn.to_excel(writer, sheet_name='Waiting positioning FDN')
+        Waitingjackfdn.to_excel(writer, sheet_name='Waiting jacking FDN')
+        Waitingmono.to_excel(writer, sheet_name='Waiting mono')
+        Waitingtp.to_excel(writer, sheet_name='Waiting TP')
+        
+        Waitingtranswtb.to_excel(writer, sheet_name='Waiting transit WTB')
+        Waitingposwtb.to_excel(writer, sheet_name='Waiting positioning WTB')
+        Waitingjackwtb.to_excel(writer, sheet_name='Waiting jacking WTB')
+        Waitingtow.to_excel(writer, sheet_name='Waiting tower')
+        Waitingnac.to_excel(writer, sheet_name='Waiting nacelle')
+        Waitingblade.to_excel(writer, sheet_name='Waiting blades')
+        
+        Overall_metrics_TP.to_excel(writer, sheet_name='TP overall metrics')
+        Overall_metrics_FP.to_excel(writer, sheet_name='FP overall metrics')
+        Overall_metrics_TN.to_excel(writer, sheet_name='TN overall metrics')
+        Overall_metrics_FN.to_excel(writer, sheet_name='FN overall metrics')
+        Overall_accuracy.to_excel(writer, sheet_name='Overall accuracy')
+        Overall_precision.to_excel(writer, sheet_name='Overall precision')
+        Overall_recall.to_excel(writer, sheet_name='Overall recall')
+    
+    

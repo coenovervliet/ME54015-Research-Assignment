@@ -2,7 +2,7 @@
 """
 Created on Tue Jan 10 14:49:02 2023
 
-@author: coeno
+@author: Coen Overvliet
 """
 
 import numpy as np
@@ -33,7 +33,6 @@ def config_1_train_predict(years, Train_years, Val_years, Test_years, input_data
     
     opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=opt, loss='mean_squared_error')
-    model.summary()
     
     history = model.fit(Train_X, Train_Y, validation_data=(Val_X, Val_Y), epochs=epochs, batch_size=batch_size)
     
@@ -71,13 +70,13 @@ def config_2_train_predict(years, Train_years, Val_years, Test_years, input_data
     
     s_wht_columns = [0]
     wind_speed_columns = [1]
-    mean_period_columns = [2]
+    peak_period_columns = [2]
     i = 1
     
     while i < datapoints_predicted:
         s_wht_columns.append(s_wht_columns[0]+3*i)
         wind_speed_columns.append(wind_speed_columns[0]+3*i)
-        mean_period_columns.append(mean_period_columns[0]+3*i)
+        peak_period_columns.append(peak_period_columns[0]+3*i)
         i+=1
     
     s_wht_Train_X = Train_X[:, :, 0].copy().reshape((Train_X.shape[0], Train_X.shape[1], 1))
@@ -92,11 +91,11 @@ def config_2_train_predict(years, Train_years, Val_years, Test_years, input_data
     wind_speed_Val_Y = Val_Y[:, wind_speed_columns].copy()
     wind_speed_Test_X = Test_X[:, :, 1].copy().reshape((Test_X.shape[0], Test_X.shape[1], 1))
     
-    mean_period_Train_X = Train_X[:, :, 2].copy().reshape((Train_X.shape[0], Train_X.shape[1], 1))
-    mean_period_Train_Y = Train_Y[:, mean_period_columns].copy()
-    mean_period_Val_X = Val_X[:, :, 2].copy().reshape((Val_X.shape[0], Val_X.shape[1], 1))
-    mean_period_Val_Y = Val_Y[:, mean_period_columns].copy()
-    mean_period_Test_X = Test_X[:, :, 2].copy().reshape((Test_X.shape[0], Test_X.shape[1], 1))
+    peak_period_Train_X = Train_X[:, :, 2].copy().reshape((Train_X.shape[0], Train_X.shape[1], 1))
+    peak_period_Train_Y = Train_Y[:, peak_period_columns].copy()
+    peak_period_Val_X = Val_X[:, :, 2].copy().reshape((Val_X.shape[0], Val_X.shape[1], 1))
+    peak_period_Val_Y = Val_Y[:, peak_period_columns].copy()
+    peak_period_Test_X = Test_X[:, :, 2].copy().reshape((Test_X.shape[0], Test_X.shape[1], 1))
     
     # Setup wave height prediction model
     s_wht_model = tf.keras.models.Sequential([
@@ -149,35 +148,35 @@ def config_2_train_predict(years, Train_years, Val_years, Test_years, input_data
     wind_speed_prediction = wind_speed_model.predict(wind_speed_Test_X)
     
     # Setup wave period prediction model
-    mean_period_model = tf.keras.models.Sequential([
-        tf.keras.layers.LSTM(LSTM_per_layer, activation='relu', input_shape=(mean_period_Train_X.shape[1], mean_period_Train_X.shape[2]), return_sequences=True),
+    peak_period_model = tf.keras.models.Sequential([
+        tf.keras.layers.LSTM(LSTM_per_layer, activation='relu', input_shape=(peak_period_Train_X.shape[1], peak_period_Train_X.shape[2]), return_sequences=True),
         tf.keras.layers.LSTM(LSTM_per_layer, activation='relu', return_sequences=True),
         tf.keras.layers.LSTM(LSTM_per_layer, activation='relu', return_sequences=False),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(mean_period_Train_Y.shape[1]),
+        tf.keras.layers.Dense(peak_period_Train_Y.shape[1]),
     ])
     
-    mean_period_opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-    mean_period_model.compile(optimizer=mean_period_opt, loss='mean_squared_error')
+    peak_period_opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    peak_period_model.compile(optimizer=peak_period_opt, loss='mean_squared_error')
     
-    mean_period_history = mean_period_model.fit(mean_period_Train_X, mean_period_Train_Y, validation_data=(mean_period_Val_X, mean_period_Val_Y), epochs=epochs, batch_size=batch_size)
+    peak_period_history = peak_period_model.fit(peak_period_Train_X, peak_period_Train_Y, validation_data=(peak_period_Val_X, peak_period_Val_Y), epochs=epochs, batch_size=batch_size)
     
     # Summarize history for loss
-    plt.plot(mean_period_history.history['loss'])
-    plt.plot(mean_period_history.history['val_loss'])
+    plt.plot(peak_period_history.history['loss'])
+    plt.plot(peak_period_history.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('mean squared error')
     plt.xlabel('epoch')
     plt.legend(['training', 'validation'], loc='upper right')
     plt.show()
     
-    mean_period_prediction = mean_period_model.predict(mean_period_Test_X)
+    peak_period_prediction = peak_period_model.predict(peak_period_Test_X)
     
     # Stitch wave height, wind speed and wave period together  
-    prediction = np.concatenate((s_wht_prediction[:,[0]], wind_speed_prediction[:,[0]], mean_period_prediction[:,[0]]), 1)
+    prediction = np.concatenate((s_wht_prediction[:,[0]], wind_speed_prediction[:,[0]], peak_period_prediction[:,[0]]), 1)
     
     for i in range(1,datapoints_predicted):
-        prediction = np.concatenate((prediction, s_wht_prediction[:,[i]], wind_speed_prediction[:,[i]], mean_period_prediction[:,[i]]), 1)
+        prediction = np.concatenate((prediction, s_wht_prediction[:,[i]], wind_speed_prediction[:,[i]], peak_period_prediction[:,[i]]), 1)
     
     # Use inverse scaler
     output_scaler = data_prep_results[6]
@@ -199,19 +198,19 @@ def write_to_file_LSTM(Test_years, prediction_horizon, datapoints_predicted, tes
         i = Test_years.index(year)
             
         length_predicted = int(test_prediction[i].shape[0]*(test_prediction[i].shape[1]/3))
-        prediction_df = pd.DataFrame(columns =['datetime','s_wht','wind_speed','mean_period'], index=range(length_predicted))
+        prediction_df = pd.DataFrame(columns =['datetime','s_wht','wind_speed','peak_period'], index=range(length_predicted))
         
         split_year = test_prediction[i]
         
         s_wht_column_nrs = [0]
         wind_speed_column_nrs = [1]
-        mean_period_column_nrs = [2]
+        peak_period_column_nrs = [2]
         i = 1
     
         while i < datapoints_predicted:
             s_wht_column_nrs.append(s_wht_column_nrs[0]+3*i)
             wind_speed_column_nrs.append(wind_speed_column_nrs[0]+3*i)
-            mean_period_column_nrs.append(mean_period_column_nrs[0]+3*i)
+            peak_period_column_nrs.append(peak_period_column_nrs[0]+3*i)
             i+=1
             
         s_wht_columns = split_year[:,s_wht_column_nrs]
@@ -220,19 +219,19 @@ def write_to_file_LSTM(Test_years, prediction_horizon, datapoints_predicted, tes
         wind_speed_columns = split_year[:,wind_speed_column_nrs]
         wind_speed_stacked = np.vstack(wind_speed_columns).ravel('C')
             
-        mean_period_columns = split_year[:,mean_period_column_nrs]
-        mean_period_stacked = np.vstack(mean_period_columns).ravel('C')
+        peak_period_columns = split_year[:,peak_period_column_nrs]
+        peak_period_stacked = np.vstack(peak_period_columns).ravel('C')
             
         prediction_df['s_wht'] = s_wht_stacked
         prediction_df['wind_speed'] = wind_speed_stacked
-        prediction_df['mean_period'] = mean_period_stacked
+        prediction_df['peak_period'] = peak_period_stacked
         
-        empty_rows = pd.DataFrame(columns =['datetime','s_wht','wind_speed','mean_period'], index=range(start+prediction_horizon))
+        empty_rows = pd.DataFrame(columns =['datetime','s_wht','wind_speed','peak_period'], index=range(start+prediction_horizon))
         df1 = pd.concat([empty_rows, prediction_df], ignore_index=True)
         
         df1['datetime'] = pd.DataFrame({'datetime': pd.date_range(start=str(year)+'-01-01', end=str(year)+'-12-31 23:00:00', freq='H')})
         
-        writePath = "E:/OneDrive/Documenten/TUDelft/Master Jaar 2/ME54015 Research Assignment/Assignment Hugo Boer/Site15Wave/Wave/"+str(year)+"pred.txt"
+        writePath = "Wave/"+str(year)+"pred.txt"
         
         with open(writePath, 'w') as f:
             df_as_csv = df1.to_csv(header=True, index=False, sep='\t', na_rep='NaN')

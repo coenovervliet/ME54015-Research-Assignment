@@ -31,7 +31,7 @@ def apply_alpha_factor(s_wht_limit, s_wht_alpha_factors, wind_speed_limit, wind_
     
     return new_s_wht_limit, new_wind_speed_limit
 
-def weather_check(current_duration, start, operation_duration, predicted_weather, observed_weather, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=None, wind_speed_limit=None, mean_period_limit=None):
+def weather_check(current_duration, start, operation_duration, predicted_weather, observed_weather, s_wht_alpha_factors, wind_speed_alpha_factors, s_wht_limit=None, wind_speed_limit=None, peak_period_limit=None):
     # Initialize metrics
     waiting=0
     
@@ -45,10 +45,10 @@ def weather_check(current_duration, start, operation_duration, predicted_weather
     wind_speed_true_negatives=0
     wind_speed_false_negatives=0
     
-    mean_period_true_positives=0
-    mean_period_false_positives=0
-    mean_period_true_negatives=0
-    mean_period_false_negatives=0
+    peak_period_true_positives=0
+    peak_period_false_positives=0
+    peak_period_true_negatives=0
+    peak_period_false_negatives=0
     
     overall_true_positives=0
     overall_false_positives=0
@@ -133,32 +133,32 @@ def weather_check(current_duration, start, operation_duration, predicted_weather
         if not wind_speed_limit is None:
             checks_needed+=1
             
-            if (predicted_weather.loc[weather_window_begin:weather_window_end,['mean_period']].max().item() <= mean_period_limit):
-                #print('mean_period_limit not exceeded in prediction')
+            if (predicted_weather.loc[weather_window_begin:weather_window_end,['peak_period']].max().item() <= peak_period_limit):
+                #print('peak_period_limit not exceeded in prediction')
                 prediction_checks+=1
                 
-                if (observed_weather.loc[weather_window_begin:weather_window_end,['mean_period']].max().item() <= mean_period_limit):
+                if (observed_weather.loc[weather_window_begin:weather_window_end,['peak_period']].max().item() <= peak_period_limit):
                     #print('correct prediction')
-                    #print('mean_period_true_positive')
-                    mean_period_true_positives+=1
+                    #print('peak_period_true_positive')
+                    peak_period_true_positives+=1
                     observation_checks+=1
                 else:
                     #print('incorrect prediction')
-                    #print('mean_period_false_positive')
-                    mean_period_false_positives+=1
+                    #print('peak_period_false_positive')
+                    peak_period_false_positives+=1
                     
             else:
-                #print('mean_period_limit exceeded in prediction')
+                #print('peak_period_limit exceeded in prediction')
                 
-                if (observed_weather.loc[weather_window_begin:weather_window_end,['mean_period']].max().item() <= mean_period_limit):
+                if (observed_weather.loc[weather_window_begin:weather_window_end,['peak_period']].max().item() <= peak_period_limit):
                     #print('incorrect prediction')
-                    #print('mean_period_false_negative')
-                    mean_period_false_negatives+=1
+                    #print('peak_period_false_negative')
+                    peak_period_false_negatives+=1
                     observation_checks+=1
                 else:
                     #print('correct prediction')
-                    #print('mean_period_true_negative')
-                    mean_period_true_positives+=1
+                    #print('peak_period_true_negative')
+                    peak_period_true_positives+=1
                 
         #print('checks needed:'+str(checks_needed))
         #print(predicted_weather.loc[weather_window_begin:weather_window_end])
@@ -204,11 +204,11 @@ def weather_check(current_duration, start, operation_duration, predicted_weather
 
     s_wht_metrics = np.array([s_wht_true_positives, s_wht_false_positives, s_wht_true_negatives, s_wht_false_negatives])
     wind_speed_metrics = np.array([wind_speed_true_positives, wind_speed_false_positives, wind_speed_true_negatives, wind_speed_false_negatives])
-    mean_period_metrics = np.array([mean_period_true_positives, mean_period_false_positives, mean_period_true_negatives, mean_period_false_negatives])
+    peak_period_metrics = np.array([peak_period_true_positives, peak_period_false_positives, peak_period_true_negatives, peak_period_false_negatives])
     overall_metrics = np.array([overall_true_positives, overall_false_positives, overall_true_negatives, overall_false_negatives])
     
     #print('operation duration:'+str(operation_duration))
     #print('waiting on weather:'+str(waiting))
     #print('current duration:'+str(current_duration))
     
-    return current_duration, waiting, overall_metrics, s_wht_metrics, wind_speed_metrics, mean_period_metrics
+    return current_duration, waiting, overall_metrics, s_wht_metrics, wind_speed_metrics, peak_period_metrics
